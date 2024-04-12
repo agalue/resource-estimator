@@ -9,7 +9,7 @@ For that purpose, Prometheus and the Prometheus Kube State Metrics must be runni
 ```
 max_over_time(
     node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{
-        namespace="xxx",
+        namespace="xxxx",
         container!=""
     }
     [24h:1h]
@@ -45,7 +45,37 @@ GOOS=linux GOARCH=amd64 go build -o resource-estimator .
 
 ## Execute
 
-The tool will extract the `kubeconfig` from your local directory to communicate with your Kubernetes cluster and assume Prometheus is exposed as `http://localhost:9090`. You can tune the URL with the `-url` parameter, although the current code doesn't support authentication. However, you can pass the TenantID via the'- tenant' parameter if you're using Cortex, Mimir, or Thanos.
+The tool will extract the `kubeconfig` from your local directory to communicate with your Kubernetes cluster and assume Prometheus is exposed as `http://localhost:9090`. You can tune the URL with the `-url` parameter, although the current code doesn't support authentication. However, when using Cortex, Mimir, or Thanos, you can pass the TenantID via the `-tenant` parameter.
+
+The easiest way to have access is via `port-forward`, for instance:
+
+For Prometheus:
+```bash
+kubectl port-forward -n observability svc/monitor-prometheus 9090
+```
+
+With the above, the tool runs without alterations (assuming your `kubeconfig` gives you read access to all the namespaces).
+
+For Mimir via Gateway:
+```bash
+kubectl port-forward -n mimir svc/mimir-gateway 9090:80
+```
+
+With the above, the tools needs an adjustment to run. For instance, with multi-tenancy disabled:
+```bash
+resource-estimator -url http://localhost:9090/prometheus
+```
+
+With multi-tenancy and targeting the Query Frontend:
+```bash
+kubectl port-forward -n mimir svc/mimir-query-frontend 9090:8080
+```
+
+Then,
+
+```bash
+resource-estimator -url http://localhost:9090/prometheus -tenant _local
+```
 
 ## Understand results
 
